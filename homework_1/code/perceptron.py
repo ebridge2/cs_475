@@ -1,41 +1,58 @@
-# percepteron.py
-# Eric Bridgeford
+# perceptron.py
 #
-# An ipmlementation of a basic percepteron.
+# written by Eric Bridgeford
+#
+# a class for abstracting a perceptron to
+# either a standard perceptron or a
+# averaged perceptron model.
 
 from cs475_types import Predictor
+from abc import ABCMeta, abstractmethod
 
-def class Perceptron(Predictor):
+class Perceptron_Base(Predictor):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, nfeatures, rate, iterations):
+        super(Perceptron_Base, self).__init__()
+        self.nfeatures = nfeatures
+        self.rate = rate
+        self.iterations = iterations
+        pass
+
+    @abstractmethod
+    def train(self, instances): pass
+
+    def predict(self, instance):
+        example = self.load_example(instance)
+        return self.s2l_dict[predict_sgn(example)]
+
+    def predict_sgn(self, example):
+        # load the example and compute the sign of the sum of
+        # the dot product
+        return np.sign(np.dot(self.w, example))
+
+    def load_example(self, instance):
+        example = np.zeros(self.nfeatures)
+        for idx in instance:
+            example[idx - 1] = instance.get(idx)
+        return example
+
+class Perceptron(Perceptron_Base):
+
     def __init__(self, nfeatures, rate, iterations):
         super(Perceptron, self).__init__(nfeatures, rate, iterations)
         pass
 
-    @classmethod
-    def train(self, instances):
-        for iteration in self.iterations:
-            for instance in instances: # iterate over the training examples
-                yhat = self.predict_sgn(instance) # predict the sign
-                y = self.l2s_dict[instance.label]
-                # if we guess wrong, update based on learning rate
+    def train(self, instance):
+        for iteration in range(0, self.iterations):
+            for instance in instances:
+                example = self.load_example(instance)
+                yhat = self.predict_sgn(example)
+                y = self.l2s_dict[instance.get_label()]
                 if (yhat not y):
                     self.w = self.w + self.rate * y * example
         pass
 
-    @classmethod
-    def predict(self, instance):
-        # use the key for mapping signs to labels
-        return self.s2l_dict(predict_label(instance))
+class Weighted_Perceptron(Perceptron_Base):
 
-    def predict_sgn(self, instance):
-        # load the example and compute the sign of the product
-        # of the transpose of w with itself
-        example = self.load_example(instance)
-        return np.sign((np.dot(self.w.transpose(), example)))
 
-    def load_example(self, instance):
-        # load a vector of zeros and fill in nonzero elements
-        # from the feature vector dict (sparse)
-        example = np.zeros((nfeatures, 1))
-        for idx in instance:
-            example[idx] = instance.get(idx)
-        return example

@@ -28,7 +28,7 @@ class FeatureVector:
         return self.feature_dict[index]
 
     def __iter__(self):
-        return iter(self.feature_dict) 
+        return iter(self.feature_dict)
 
     def max_feature(self):
         return max(self.feature_dict.keys(), key=int)
@@ -38,17 +38,23 @@ class Instance:
         self._feature_vector = feature_vector
         self._label = label
 
+    def __iter__(self):
+        return iter(self._feature_vector)
+
+    def get_label(self):
+        return str(self._label)
+
+    def get(self, idx):
+        return self._feature_vector.get(idx)
+
+    def max_feature(self):
+        return self._feature_vector.max_feature()
+
 # abstract base class for defining predictors
 class Predictor:
     __metaclass__ = ABCMeta
 
-    def __init__(self, nfeatures, rate, iterations):
-        self.rate = rate
-        self.iterations = iterations
-        self.nfeatures = nfeatures
-        self.w = np.zeros((nfeatures, 1))
-        self.l2s_dict = {0: -1, 1: 1}
-        self.s2l_dict = {-1: 0, 1: 1}
+    def __init__(self): pass
 
     @abstractmethod
     def train(self, instances): pass

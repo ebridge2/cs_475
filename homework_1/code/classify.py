@@ -4,6 +4,7 @@ import sys
 import pickle
 
 from cs475_types import ClassificationLabel, FeatureVector, Instance, Predictor
+from perceptron import Perceptron, Weighted_Perceptron
 
 def load_data(filename):
     instances = []
@@ -38,7 +39,6 @@ def load_data(filename):
                 
                 if value != 0.0:
                     feature_vector.add(index, value)
-
             instance = Instance(feature_vector, label)
             instances.append(instance)
             # since we have a sparse vector, we might not necessarily see the total number of features
@@ -82,11 +82,14 @@ def check_args(args):
 
 def train(instances, algorithm, nfeatures, rate, iterations):
     # if the user explicitly requests a weighted model
-    if (algorithm == "weighted"):
+    if (algorithm == "averaged_perceptron"):
         predictor = Weighted_Perceptron(nfeatures, rate, iterations)
-    else: # use a simple perceptron model
+    elif (algorithm == "perceptron"): # use a simple perceptron model
         predictor = Perceptron(nfeatures, rate, iterations)
     # train it on the data
+    else:
+        raise ValueError("You did not pass a relevant algorithm name." +
+                         "Options are 'averaged_perceptron' and 'perceptron'.")
     predictor.train(instances)
     return predictor # return it back
 
@@ -122,7 +125,7 @@ def main():
             
     elif args.mode.lower() == "test":
         # Load the test data.
-        instances = load_data(args.data)
+        (instances, nfeatures) = load_data(args.data)
 
         predictor = None
         # Load the model.
