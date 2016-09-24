@@ -8,6 +8,8 @@
 
 from cs475_types import Predictor
 from abc import ABCMeta, abstractmethod
+import numpy as np
+
 
 class Perceptron_Base(Predictor):
     __metaclass__ = ABCMeta
@@ -17,6 +19,9 @@ class Perceptron_Base(Predictor):
         self.nfeatures = nfeatures
         self.rate = rate
         self.iterations = iterations
+        self.w = np.zeros(self.nfeatures)
+        self.l2s_dict = {'0': -1, '1': 1}
+        self.s2l_dict = {-1: '0', 1: '1'}
         pass
 
     @abstractmethod
@@ -24,7 +29,7 @@ class Perceptron_Base(Predictor):
 
     def predict(self, instance):
         example = self.load_example(instance)
-        return self.s2l_dict[predict_sgn(example)]
+        return self.s2l_dict[self.predict_sgn(example)]
 
     def predict_sgn(self, example):
         # load the example and compute the sign of the sum of
@@ -43,16 +48,18 @@ class Perceptron(Perceptron_Base):
         super(Perceptron, self).__init__(nfeatures, rate, iterations)
         pass
 
-    def train(self, instance):
+    def train(self, instances):
         for iteration in range(0, self.iterations):
             for instance in instances:
                 example = self.load_example(instance)
                 yhat = self.predict_sgn(example)
                 y = self.l2s_dict[instance.get_label()]
-                if (yhat not y):
+                if (yhat != y):
                     self.w = self.w + self.rate * y * example
         pass
 
 class Weighted_Perceptron(Perceptron_Base):
 
-
+    def __init__(self, nfeatures, rate, iterations):
+        super(Weighted_Perceptron, self).__init__(nfeatures, rate, iterations)
+        pass
