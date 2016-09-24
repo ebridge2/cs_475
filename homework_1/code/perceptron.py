@@ -14,24 +14,27 @@ def class Perceptron(Predictor):
     def train(self, instances):
         for iteration in self.iterations:
             for instance in instances: # iterate over the training examples
-                example = np.zeros((nfeatures, 1))
-                for idx in instance:
-                    example[idx] = instance.get(idx)
-                yhat = self.predict_sgn(instance)
-                y = self.instance_label_key[instance.label]
+                yhat = self.predict_sgn(instance) # predict the sign
+                y = self.l2s_dict[instance.label]
+                # if we guess wrong, update based on learning rate
                 if (yhat not y):
                     self.w = self.w + self.rate * y * example
         pass
 
     @classmethod
     def predict(self, instance):
-        return self.p_label_key(predict_label(instance))
+        # use the key for mapping signs to labels
+        return self.s2l_dict(predict_label(instance))
 
     def predict_sgn(self, instance):
+        # load the example and compute the sign of the product
+        # of the transpose of w with itself
         example = self.load_example(instance)
         return np.sign((np.dot(self.w.transpose(), example)))
 
     def load_example(self, instance):
+        # load a vector of zeros and fill in nonzero elements
+        # from the feature vector dict (sparse)
         example = np.zeros((nfeatures, 1))
         for idx in instance:
             example[idx] = instance.get(idx)

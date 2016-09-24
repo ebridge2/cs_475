@@ -47,8 +47,8 @@ class Predictor:
         self.iterations = iterations
         self.nfeatures = nfeatures
         self.w = np.zeros((nfeatures, 1))
-        self.instance_label_key = {0: -1, 1: 1}
-        self.p_label_key = {-1: 0, 1: 1}
+        self.l2s_dict = {0: -1, 1: 1}
+        self.s2l_dict = {-1: 0, 1: 1}
 
     @abstractmethod
     def train(self, instances): pass
