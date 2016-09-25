@@ -41,12 +41,8 @@ def load_data(filename):
                     feature_vector.add(index, value)
             instance = Instance(feature_vector, label)
             instances.append(instance)
-            # since we have a sparse vector, we might not necessarily see the total number of features
-            # in a given instance, so track the highest feature number we see
-            # ie, some examples might have features up to 75, but another might only have 74 since the 
-            # 75th for that example was 0
-            nfeatures = max(feature_vector.max_feature(), nfeatures)
-    return tuple((instances, nfeatures))
+
+    return instances
 
 
 def get_args():
@@ -80,12 +76,12 @@ def check_args(args):
         if not os.path.exists(args.model_file):
             raise Exception("model file specified by --model-file does not exist.")
 
-def train(instances, algorithm, nfeatures, rate, iterations):
+def train(instances, algorithm, rate, iterations):
     # if the user explicitly requests a weighted model
     if (algorithm == "averaged_perceptron"):
-        predictor = Weighted_Perceptron(nfeatures, rate, iterations)
+        predictor = Weighted_Perceptron(rate, iterations)
     elif (algorithm == "perceptron"): # use a simple perceptron model
-        predictor = Perceptron(nfeatures, rate, iterations)
+        predictor = Perceptron(rate, iterations)
     # train it on the data
     else:
         raise ValueError("You did not pass a relevant algorithm name." +
@@ -110,10 +106,10 @@ def main():
 
     if args.mode.lower() == "train":
         # Load the training data.
-        (instances, nfeatures) = load_data(args.data)
+        instances = load_data(args.data)
 
         # Train the model.
-        predictor = train(instances, args.algorithm, nfeatures, args.online_learning_rate,
+        predictor = train(instances, args.algorithm, args.online_learning_rate,
                           args.online_training_iterations)
         try:
             with open(args.model_file, 'wb') as writer:
@@ -125,7 +121,7 @@ def main():
             
     elif args.mode.lower() == "test":
         # Load the test data.
-        (instances, nfeatures) = load_data(args.data)
+        instances = load_data(args.data)
 
         predictor = None
         # Load the model.

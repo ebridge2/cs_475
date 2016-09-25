@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# a shell script to automate testing. Makes batch testing simpler.
+#
+# written by Eric Bridgeford
+# #ShellFTW
 
 algorithm=(perceptron averaged_perceptron)
 options=(nlp easy hard bio speech finance vision)
