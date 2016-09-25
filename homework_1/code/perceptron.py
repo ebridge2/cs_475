@@ -37,8 +37,11 @@ class Perceptron_Base(Predictor):
     def predict_sgn(self, example, weight):
         # load the example and compute the sign of the sum of
         # the dot product
-
-        return np.sign(np.dot(weight, example))
+        value = np.sign(np.dot(weight, example))
+        if (value >= 0):
+            return 1
+        else:
+            return -1
 
     def load_example(self, instance):
         example = np.zeros(max(instance.max_feature(), self.nfeatures))
@@ -61,6 +64,7 @@ class Perceptron_Base(Predictor):
         else:
             return self.w
 
+
 class Perceptron(Perceptron_Base):
 
     def __init__(self, rate, iterations):
@@ -78,6 +82,7 @@ class Perceptron(Perceptron_Base):
                     self.w = self.w + self.rate * y * example
         pass
 
+
 class Weighted_Perceptron(Perceptron_Base):
 
     def __init__(self, rate, iterations):
@@ -85,8 +90,8 @@ class Weighted_Perceptron(Perceptron_Base):
         pass
 
     def train(self, instances):
+        w_round = self.w.copy()
         for iteration in range(0, self.iterations):
-            w_round = self.w.copy()
             for instance in instances:
                 example = self.load_example(instance)
                 w_round = self.check_dims(example, weight=w_round)
@@ -94,5 +99,5 @@ class Weighted_Perceptron(Perceptron_Base):
                 y = self.l2s_dict[instance.get_label()]
                 if (yhat != y):
                     w_round = w_round + self.rate * y * example
-            self.w += w_round
+                self.w += w_round
         pass
