@@ -14,7 +14,7 @@ class ClassificationLabel(Label):
         pass
         
     def __str__(self):
-        return(str(self.label))
+        return str(self.label)
 
 class FeatureVector:
     def __init__(self):
@@ -60,4 +60,4 @@ class Predictor:
     def train(self, instances): pass
 
     @abstractmethod
-    def predict(self, instance): pass       
+    def predict(self, instance): pass 
