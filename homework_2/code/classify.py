@@ -5,6 +5,8 @@ import pickle
 
 from cs475_types import ClassificationLabel, FeatureVector, Instance, Predictor
 from perceptron import Perceptron, Weighted_Perceptron, Margin_Perceptron
+from pegasos import Pegasos
+
 
 def load_data(filename):
     instances = []
@@ -59,6 +61,9 @@ def get_args():
                         default=1.0)
     parser.add_argument("--online-training-iterations", type=int,
                         help="The number of training iterations for online methods.", default=5)    
+    parser.add_argument("--pegasos-lambda", type=float, help="The regularization parameter for Pegasos.",
+                        default=1e-4)
+
     
     args = parser.parse_args()
     check_args(args)
@@ -76,7 +81,7 @@ def check_args(args):
         if not os.path.exists(args.model_file):
             raise Exception("model file specified by --model-file does not exist.")
 
-def train(instances, algorithm, rate, iterations):
+def train(instances, algorithm, rate, iterations, **kwargs):
     # if the user explicitly requests a weighted model
     if (algorithm == "averaged_perceptron"):
         predictor = Weighted_Perceptron(rate, iterations)
@@ -84,12 +89,14 @@ def train(instances, algorithm, rate, iterations):
         predictor = Perceptron(rate, iterations)
     elif (algorithm == "margin_perceptron"):
         predictor = Margin_Perceptron(rate, iterations)
+    elif (algorithm == "pegasos"):
+        predictor = Pegasos(kwargs['lambd'], iterations)
     # train it on the data
     else:
         raise ValueError("You did not pass a relevant algorithm name." +
                          "Options are 'averaged_perceptron', 'perceptron'." +
                          "'margin_perceptron', and 'pegasos'. You passed: " +
-                         + str(algorithm))
+                         str(algorithm))
     predictor.train(instances)
     return predictor # return it back
 
@@ -114,7 +121,7 @@ def main():
 
         # Train the model.
         predictor = train(instances, args.algorithm, args.online_learning_rate,
-                          args.online_training_iterations)
+                          args.online_training_iterations, lambd=args.pegasos_lambda)
         try:
             with open(args.model_file, 'wb') as writer:
                 pickle.dump(predictor, writer)

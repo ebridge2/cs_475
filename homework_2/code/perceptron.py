@@ -15,15 +15,7 @@ class Perceptron_Base(Predictor):
     __metaclass__ = ABCMeta
 
     def __init__(self, rate, iterations):
-        super(Perceptron_Base, self).__init__()
-        self.nfeatures = 1
-        self.rate = rate
-        self.iterations = iterations
-        self.w = np.zeros(self.nfeatures)
-        # define label to signed
-        self.l2s_dict = {'0': -1, '1': 1}
-        # define the signed to label
-        self.s2l_dict = {-1: '0', 1: '1', 0: '1'}
+        super(Perceptron_Base, self).__init__(rate, iterations)
         pass
 
     @abstractmethod
@@ -45,28 +37,6 @@ class Perceptron_Base(Predictor):
             return 1
         else:
             return -1
-
-    def load_example(self, instance):
-        example = np.zeros(max(instance.max_feature(), self.nfeatures))
-        for idx in instance:
-            # since we have 1 indexed features and 0-indexed arrays
-            example[idx - 1] = instance.get(idx)
-        return example
-
-    def check_dims(self, example, weight=None):
-        inst_feat = example.shape[0]
-        if (inst_feat > self.nfeatures):
-            self.w = np.pad(self.w, (0, inst_feat - self.nfeatures),
-                'constant', constant_values=0)
-            self.nfeatures = inst_feat
-            if (weight is not None):
-                weight = np.pad(weight, (0, inst_feat - weight.shape[0]),
-                            'constant', constant_values=0)
-        if (weight is not None):
-            return weight
-        else:
-            return self.w
-
 
 class Perceptron(Perceptron_Base):
 

@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import numpy as np
 
 # abstract base class for defining labels
 class Label:
@@ -54,10 +55,40 @@ class Instance:
 class Predictor:
     __metaclass__ = ABCMeta
 
-    def __init__(self): pass
+    def __init__(self, rate, iterations):
+        # define label to signed
+        self.l2s_dict = {'0': -1, '1': 1}
+        # define the signed to label
+        self.s2l_dict = {-1: '0', 1: '1', 0: '1'}
+        self.nfeatures = 1
+        self.rate = rate
+        self.iterations = iterations
+        self.w = np.zeros(self.nfeatures)
+        pass
 
     @abstractmethod
     def train(self, instances): pass
 
     @abstractmethod
     def predict(self, instance): pass 
+
+    def load_example(self, instance):
+        example = np.zeros(max(instance.max_feature(), self.nfeatures))
+        for idx in instance:
+            # since we have 1 indexed features and 0-indexed arrays
+            example[idx - 1] = instance.get(idx)
+        return example
+
+    def check_dims(self, example, weight=None):
+        inst_feat = example.shape[0]
+        if (inst_feat > self.nfeatures):
+            self.w = np.pad(self.w, (0, inst_feat - self.nfeatures),
+                'constant', constant_values=0)
+            self.nfeatures = inst_feat
+            if (weight is not None):
+                weight = np.pad(weight, (0, inst_feat - weight.shape[0]),
+                            'constant', constant_values=0)
+        if (weight is not None):
+            return weight
+        else:
+            return self.w
