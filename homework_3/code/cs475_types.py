@@ -55,7 +55,7 @@ class Instance:
 class Predictor:
     __metaclass__ = ABCMeta
 
-    def __init__(self, rate, iterations): pass
+    def __init__(self): pass
 
     @abstractmethod
     def train(self, instances): pass
@@ -71,6 +71,7 @@ class Predictor_Weight(Predictor):
     __metaclass__ = ABCMeta
 
     def __init__(self, rate, iterations):
+        super(Predictor_Weight, self).__init__()
         # define label to signed
         self.l2s_dict = {'0': -1, '1': 1}
         # define the signed to label

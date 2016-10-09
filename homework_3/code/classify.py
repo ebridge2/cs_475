@@ -6,7 +6,8 @@ import pickle
 from cs475_types import ClassificationLabel, FeatureVector, Instance, Predictor
 from perceptron import Perceptron, Weighted_Perceptron, Margin_Perceptron
 from pegasos import Pegasos
-from knn import KNN
+from knn import Standard_knn, Distance_knn
+
 
 def load_data(filename):
     instances = []
@@ -63,6 +64,8 @@ def get_args():
                         help="The number of training iterations for online methods.", default=5)    
     parser.add_argument("--pegasos-lambda", type=float, help="The regularization parameter for Pegasos.",
                         default=1e-4)
+    parser.add_argument("--knn", type=int, help="The value of K for KNN classification.",
+                        default=5)
 
     
     args = parser.parse_args()
@@ -92,7 +95,9 @@ def train(instances, algorithm, rate, iterations, lambd, knn):
     elif (algorithm == "pegasos"):
         predictor = Pegasos(lambd, iterations)
     elif (algorithm == "knn"):
-        predictor = KNN(knn)
+        predictor = Standard_knn(knn)
+    elif (algorithm == "distance_knn"):
+        predictor = Distance_knn(knn)
     # train it on the data
     else:
         raise ValueError("You did not pass a relevant algorithm name." +
