@@ -72,7 +72,7 @@ class Adaboost(Predictor):
                 if (condition_ra_same_value.shape[0] != 0):
                     # the next different labels to appear with value greater than our current value
                     condition_idxs = np.where(np.logical_and(sorted_vals['label'] != this_val['label'],
-                                                             sorted_vals['value'] > this_val['value']))[0]
+                                                             sorted_vals['value'] >= this_val['value']))[0]
                     # if we have none of the other labels after this one, we are finished
                     if (condition_idxs.shape[0] != 0):
                         # the next same labels to appear with value greater than our current value
@@ -102,12 +102,14 @@ class Adaboost(Predictor):
         possible_values = np.zeros(self.unique_labels.shape[0])
         if (feat >= c):
             for label_id in range(0, self.unique_labels.shape[0]):
-                condition_location = np.where(sorted_vals['value'] >= c)
-                possible_values[label_id] = np.count_nonzero(np.where(sorted_vals[condition_location]['label'] == self.unique_labels[label_id]))
+                possible_values[label_id] = np.where(np.logical_and(sorted_vals['value'] >= c,
+                                                    sorted_vals['label'] == self.unique_labels[label_id]
+                                                    ))[0].shape[0]
         else:
             for label_id in range(0, self.unique_labels.shape[0]):
-                condition_location = np.where(sorted_vals['value'] < c)[0]
-                possible_values[label_id] = np.where(sorted_vals[condition_location]['label'] == self.unique_labels[label_id])[0].shape[0]
+                possible_values[label_id] = np.where(np.logical_and(sorted_vals['value'] < c,
+                                                    sorted_vals['label'] == self.unique_labels[label_id]
+                                                    ))[0].shape[0]
         return self.unique_labels[np.argmax(possible_values)]
  
     def train(self, instances):
@@ -119,9 +121,8 @@ class Adaboost(Predictor):
         D.fill(1/float(self.ninstances))
         t = 0
         tol = 1 # default to worst case unless data tells us otherwise
-        self.alpha = np.zeros(self.iter_boost) # initialize our weight vecs
+        self.alpha = np.ones(self.iter_boost) # initialize our weight vecs
         while (t < self.iter_boost and tol > .000001):
-            print t
             # one best hypothesis per feature will be compared
             hyp_c = np.array([tuple((0, 0, 0)) for i in range(0, self.nfeatures)],
                              dtype=dtype_hyp)
@@ -138,34 +139,44 @@ class Adaboost(Predictor):
                         yhat = self.calculate_hypothesis(feat, cutoff, sorted_vals)
                         feat_err[c]['error'] = feat_err[c]['error'] + D[i]*float(yhat != y)
                 hyp_c[j] = np.sort(feat_err, order=('error', 'cutoff'))[0] # lowest error
-            
             sorted_feat_hyps = np.sort(hyp_c, order=('error', 'feature'))
             self.hyp[t] = sorted_feat_hyps[0] # lowest error
             tol = self.hyp[t]['error'] # tolerance is our error
-            best_feature = self.hyp[t]['feature']
-            feature_sorted_vals = self.get_feature_set(best_feature)
-            self.alpha[t] = .5 * np.log((1-tol)/tol)
-            power_ar = np.array([-self.alpha[t] *\
-                                 self.calculate_hypothesis(example['value'],
-                                                           self.hyp[t]['cutoff'],
-                                                           feature_sorted_vals) * example['label']
-                                 for example in feature_sorted_vals])
-            exp_term = np.exp(power_ar)
-            Z = np.dot(D, exp_term).sum()
-            D = 1/float(Z) * np.multiply(D, exp_term)
+            if (tol != 0): # in case we have a divide by zero
+                best_feature = self.hyp[t]['feature']
+                feature_sorted_vals = self.get_feature_set(best_feature)
+                self.alpha[t] = .5 * np.log((1-tol)/tol)
+                power_ar = np.array([-self.alpha[t] *\
+                                     self.calculate_hypothesis(self.get_feat(example,best_feature),
+                                                               self.hyp[t]['cutoff'],
+                                                               feature_sorted_vals) * self.get_label(example)
+                                     for example in self.instances])
+                exp_term = np.exp(power_ar)
+                Z = np.dot(D, exp_term).sum()
+                D = 1/float(Z) * np.multiply(D, exp_term)
             t = t + 1
+        self.hyp = self.hyp[0:t]
+        self.alpha = self.alpha[0:t]
+        pass
 
     def predict(self, instance):
-        dtype_predict = [('value', int), ('label', int)]
+#        print "NEXT!"
+        dtype_predict = [('value', float), ('label', int)]
         possible_labels = np.array([tuple((0, label)) for label in self.unique_labels],
                                    dtype=dtype_predict)
-
-        hypo_per_t = np.array([self.calculate_hypothesis(self.get_feat(example,
+#        print self.hyp
+#        print self.get_feature_set(self.hyp[0]['feature'])
+#        print self.get_feat(instance, self.hyp[0]['feature'])
+        hypo_per_t = np.array([self.calculate_hypothesis(self.get_feat(instance,
                                                                        self.hyp[t]['feature']),
                                                          self.hyp[t]['cutoff'],
                                                          self.get_feature_set(self.hyp[t]['feature']))
-                              for t in range(0, self.iter_boost)])
+                              for t in range(0, self.hyp.shape[0])])
+#        print hypo_per_t
         for i in range(0, possible_labels.shape[0]):
-            np.where(hypo_per_t == possible_labels[i])[0].shape[0] # number of matches
-            possible_labels[i]['value'] = np.dot(self.alpha, hypo_per_t)
-        return self.l2s_key[np.sort(possible_labels, order=('value', 'label'))[0]['label']]
+            votes = np.array((hypo_per_t == possible_labels[i]['label'])).astype(int) # number of matches
+#            print votes
+            possible_labels[i]['value'] = np.dot(self.alpha, votes)
+#        print possible_labels
+        yhat = np.sort(possible_labels, order=('value', 'label'))[possible_labels.shape[0]- 1]
+        return self.l2s_key[yhat['label']]
