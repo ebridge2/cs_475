@@ -25,14 +25,18 @@ class FeatureVector:
         self.feature_dict[index] = value
         pass
         
-    def get(self, index):
-        return self.feature_dict[index]
+    def get(self, index, default=None):
+        return self.feature_dict.get(index, default)
 
     def __iter__(self):
         return iter(self.feature_dict)
 
     def max_feature(self):
-        return max(self.feature_dict.keys(), key=int)
+        feats = self.feature_dict.keys()
+        if len(feats) > 0:
+            return max(self.feature_dict.keys(), key=int)
+        else:
+            return None
 
 class Instance:
     def __init__(self, feature_vector, label):
@@ -45,8 +49,8 @@ class Instance:
     def get_label(self):
         return str(self._label)
 
-    def get(self, idx):
-        return self._feature_vector.get(idx)
+    def get(self, idx, default=None):
+        return self._feature_vector.get(idx, default)
 
     def max_feature(self):
         return self._feature_vector.max_feature()

@@ -45,6 +45,7 @@ class KNN(Predictor):
         for cl_label in dict_class:
             if (dict_class[cl_label] == maxval):
                 list_min_class.append(int(cl_label))
+
         return str(min(list_min_class))
 
 

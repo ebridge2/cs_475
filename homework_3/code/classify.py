@@ -7,7 +7,7 @@ from cs475_types import ClassificationLabel, FeatureVector, Instance, Predictor
 from perceptron import Perceptron, Weighted_Perceptron, Margin_Perceptron
 from pegasos import Pegasos
 from knn import Standard_knn, Distance_knn
-
+from adaboost import Adaboost
 
 def load_data(filename):
     instances = []
@@ -66,6 +66,9 @@ def get_args():
                         default=1e-4)
     parser.add_argument("--knn", type=int, help="The value of K for KNN classification.",
                         default=5)
+    parser.add_argument("--num-boosting-iterations", type=int, help="The number of boosting iterations to run.",
+                        default=10)
+
 
     
     args = parser.parse_args()
@@ -84,7 +87,7 @@ def check_args(args):
         if not os.path.exists(args.model_file):
             raise Exception("model file specified by --model-file does not exist.")
 
-def train(instances, algorithm, rate, iterations, lambd, knn):
+def train(instances, algorithm, rate, iterations, lambd, knn, boost_iter):
     # if the user explicitly requests a weighted model
     if (algorithm == "averaged_perceptron"):
         predictor = Weighted_Perceptron(rate, iterations)
@@ -98,6 +101,8 @@ def train(instances, algorithm, rate, iterations, lambd, knn):
         predictor = Standard_knn(knn)
     elif (algorithm == "distance_knn"):
         predictor = Distance_knn(knn)
+    elif (algorithm == "adaboost"):
+        predictor = Adaboost(boost_iter)
     # train it on the data
     else:
         raise ValueError("You did not pass a relevant algorithm name." +
@@ -128,8 +133,8 @@ def main():
 
         # Train the model.
         predictor = train(instances, args.algorithm, args.online_learning_rate,
-                          args.online_training_iterations, lambd=args.pegasos_lambda,
-                          knn=args.knn)
+                          args.online_training_iterations, args.pegasos_lambda,
+                          args.knn, args.num_boosting_iterations)
         try:
             with open(args.model_file, 'wb') as writer:
                 pickle.dump(predictor, writer)
