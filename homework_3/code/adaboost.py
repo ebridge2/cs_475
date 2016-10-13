@@ -104,7 +104,6 @@ class Adaboost(Predictor):
                     new_err += D[i]*float(int(yhat) != example['label'])
                 self.hyp_set[idx]['error'] = new_err
             sorted_feat_hyps = np.sort(self.hyp_set, order=('error'))
-            print sorted_feat_hyps
             self.hyp[t] = sorted_feat_hyps[0] # lowest error
             tol = self.hyp[t]['error'] # tolerance is our error
             if (tol != 0): # in case we have a divide by zero
@@ -116,13 +115,10 @@ class Adaboost(Predictor):
                                      for example in feature_vals])
                 exp_term = np.exp(power_ar)
                 Z = np.dot(D, exp_term).sum()
-                print Z
                 D = 1/float(Z) * np.multiply(D, exp_term)
             t = t + 1
         self.hyp = self.hyp[0:t]
-        print self.hyp
         self.alpha = self.alpha[0:t]
-        print self.alpha
         pass
 
     def predict(self, instance):
@@ -133,7 +129,6 @@ class Adaboost(Predictor):
                               for t in range(0, self.hyp.shape[0])])
         for i in range(0, possible_labels.shape[0]):
             votes = np.array(hypo_per_t == possible_labels[i]['label']).astype(int) # number of matches
-            print "votes" + str(votes)
             possible_labels[i]['value'] = np.dot(self.alpha, votes)
         yhat = np.sort(possible_labels, order=('value', 'label'))[possible_labels.shape[0]- 1]
         return self.l2s_key[yhat['label']]
