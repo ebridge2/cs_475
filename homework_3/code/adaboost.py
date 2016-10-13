@@ -13,7 +13,7 @@ class Adaboost(Predictor):
     __metaclass__ = ABCMeta
 
     # a datatype for how we will sort our hypothesis classes.
-    sort_dtype = [('label', int), ('value', float)]
+    sort_dtype = [('label', float), ('value', float)]
 
     def __init__(self, iterations):
         super(Adaboost, self).__init__()
@@ -38,18 +38,18 @@ class Adaboost(Predictor):
 
     def get_feature_set(self, feature):
         values = np.array([tuple((self.get_label(instance),
-                          self.get_feat(instance, feature))) for instance in self.instances],
+                          self.get_feat(instance, int(feature)))) for instance in self.instances],
                           dtype=self.sort_dtype)
         return np.sort(values, order=['value', 'label'])
 
     def make_hypothesis_class(self, instances):
         self.instances = instances
         self.learn_features()
-        self.hyp_dtype =  dtype=[('feature', int), ('cutoff', float),
-                                 ('greater', int), ('less', int), ('error', float)]
+        self.hyp_dtype =  dtype=[('feature', float), ('cutoff', float),
+                                 ('greater', float), ('less', float), ('error', float)]
  
         # overallocate so we don't have to copy ever
-        self.hyp_set = np.array([tuple((0, 0, 0, 0, 0))
+        self.hyp_set = np.array([tuple((np.nan, np.nan, np.nan, np.nan, np.nan))
                                 for i in range(0, self.nfeatures*len(self.instances))],
                                 dtype = self.hyp_dtype)
         count = 0 # default to zero and replace as needed to hypo set
@@ -62,15 +62,17 @@ class Adaboost(Predictor):
                 next_val = sorted_vals[idx + 1]
                 cutoff = np.mean([this_val['value'], next_val['value']])
                 # put our potential hypotheses in a 0-indexed list
-                (gvals, gv_ct) = np.unique(sorted_vals[sorted_vals['value'] > cutoff]['label'],
-                                           return_counts=True)
-                (lvals, lv_ct) = np.unique(sorted_vals[sorted_vals['value'] <= cutoff]['label'],
-                                           return_counts=True)
-                if (lvals.shape[0] != 0) and (gvals.shape[0] != 0):
-                    greater = gvals[np.argmax(gv_ct)]
-                    less = lvals[np.argmax(lv_ct)]
-                    self.hyp_set[count] = tuple((feature_id, cutoff, greater, less, 0))
-                    count = count + 1
+                if (np.where(np.logical_and(self.hyp_set['feature'] == float(feature_id),
+                                            self.hyp_set['cutoff'] == float(cutoff)))[0].shape[0] == 0):
+                    (gvals, gv_ct) = np.unique(sorted_vals[sorted_vals['value'] > cutoff]['label'],
+                                               return_counts=True)
+                    (lvals, lv_ct) = np.unique(sorted_vals[sorted_vals['value'] <= cutoff]['label'],
+                                               return_counts=True)
+                    if (lvals.shape[0] != 0) and (gvals.shape[0] != 0):
+                        greater = gvals[np.argmax(gv_ct)]
+                        less = lvals[np.argmax(lv_ct)]
+                        self.hyp_set[count] = tuple((feature_id, cutoff, greater, less, 0))
+                        count = count + 1
         # return only as needed
         self.hyp_set = self.hyp_set[0:count]
         pass
@@ -95,12 +97,13 @@ class Adaboost(Predictor):
             # one best hypothesis per feature will be compared
             for idx in range(0, self.hyp_set.shape[0]):
                 new_err = 0
+                hypo = self.hyp_set[idx]
                 feature = self.hyp_set[idx]['feature']
                 examples = self.get_feature_set(feature)
                 for i in range(0, examples.shape[0]):
                     example = examples[i]
-                    yhat = self.calculate_hyp(self.hyp_set[idx], example['value'])
-                    new_err += D[i]*float(yhat != example['label'])
+                    yhat = self.calculate_hyp(hypo, example['value'])
+                    new_err += D[i]*float(int(yhat) != example['label'])
                 self.hyp_set[idx]['error'] = new_err
             sorted_feat_hyps = np.sort(self.hyp_set, order=('error', 'feature'))
             self.hyp[t] = sorted_feat_hyps[0] # lowest error
