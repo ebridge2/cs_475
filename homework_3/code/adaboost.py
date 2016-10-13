@@ -45,11 +45,11 @@ class Adaboost(Predictor):
     def make_hypothesis_class(self, instances):
         self.instances = instances
         self.learn_features()
-        self.hyp_dtype =  dtype=[('feature', float), ('cutoff', float),
-                                 ('greater', float), ('less', float), ('error', float)]
+        self.hyp_dtype =  dtype=[('feature', int), ('cutoff', float),
+                                 ('greater', int), ('less', int), ('error', float)]
  
         # overallocate so we don't have to copy ever
-        self.hyp_set = np.array([tuple((np.nan, np.nan, np.nan, np.nan, np.nan))
+        self.hyp_set = np.array([tuple((0, np.nan, 0, 0, np.nan))
                                 for i in range(0, self.nfeatures*len(self.instances))],
                                 dtype = self.hyp_dtype)
         count = 0 # default to zero and replace as needed to hypo set
@@ -57,22 +57,20 @@ class Adaboost(Predictor):
             sorted_vals = self.get_feature_set(feature_id)
             # store the labels with the values so we can simplify hypothesis class significantly
             this_feature = np.zeros(0)
-            for idx in range(0, sorted_vals.shape[0] - 1):
-                this_val = sorted_vals[idx]
-                next_val = sorted_vals[idx + 1]
-                cutoff = np.mean([this_val['value'], next_val['value']])
+            unique_vals = np.unique(sorted_vals['value'])
+            for idx in range(0, unique_vals.shape[0] - 1):
+                this_val = unique_vals[idx]
+                next_val = unique_vals[idx + 1]
+                cutoff = np.mean([this_val, next_val])
                 # put our potential hypotheses in a 0-indexed list
-                if (np.where(np.logical_and(self.hyp_set['feature'] == float(feature_id),
-                                            self.hyp_set['cutoff'] == float(cutoff)))[0].shape[0] == 0):
-                    (gvals, gv_ct) = np.unique(sorted_vals[sorted_vals['value'] > cutoff]['label'],
-                                               return_counts=True)
-                    (lvals, lv_ct) = np.unique(sorted_vals[sorted_vals['value'] <= cutoff]['label'],
-                                               return_counts=True)
-                    if (lvals.shape[0] != 0) and (gvals.shape[0] != 0):
-                        greater = gvals[np.argmax(gv_ct)]
-                        less = lvals[np.argmax(lv_ct)]
-                        self.hyp_set[count] = tuple((feature_id, cutoff, greater, less, 0))
-                        count = count + 1
+                (gvals, gv_ct) = np.unique(sorted_vals[sorted_vals['value'] > cutoff]['label'],
+                                           return_counts=True)
+                (lvals, lv_ct) = np.unique(sorted_vals[sorted_vals['value'] <= cutoff]['label'],
+                                           return_counts=True)
+                greater = gvals[np.argmax(gv_ct)]
+                less = lvals[np.argmax(lv_ct)]
+                self.hyp_set[count] = tuple((feature_id, cutoff, greater, less, 0))
+                count = count + 1
         # return only as needed
         self.hyp_set = self.hyp_set[0:count]
         pass
@@ -105,7 +103,8 @@ class Adaboost(Predictor):
                     yhat = self.calculate_hyp(hypo, example['value'])
                     new_err += D[i]*float(int(yhat) != example['label'])
                 self.hyp_set[idx]['error'] = new_err
-            sorted_feat_hyps = np.sort(self.hyp_set, order=('error', 'feature'))
+            sorted_feat_hyps = np.sort(self.hyp_set, order=('error'))
+            print sorted_feat_hyps
             self.hyp[t] = sorted_feat_hyps[0] # lowest error
             tol = self.hyp[t]['error'] # tolerance is our error
             if (tol != 0): # in case we have a divide by zero
@@ -113,10 +112,11 @@ class Adaboost(Predictor):
                 feature_sorted_vals = self.get_feature_set(best_feature)
                 self.alpha[t] = .5*np.log((1-tol)/tol)
                 power_ar = np.array([-self.alpha[t] *\
-                                     self.calculate_hyp(self.hyp[t], example['value']) * example['label']
+                                     float(self.calculate_hyp(self.hyp[t], example['value']) * example['label'])
                                      for example in feature_sorted_vals])
                 exp_term = np.exp(power_ar)
                 Z = np.dot(D, exp_term).sum()
+                print Z
                 D = 1/float(Z) * np.multiply(D, exp_term)
             t = t + 1
         self.hyp = self.hyp[0:t]
