@@ -2,7 +2,8 @@
 # written by Eric Bridgeford
 #
 # a class for the adaboost algorithm
-#
+# takes advantage of the intuitive structured array
+# system of numpy
 
 from cs475_types import Predictor
 from abc import ABCMeta, abstractmethod
@@ -27,21 +28,31 @@ class Adaboost(Predictor):
         self.ninstances = len(self.instances)
         for instance in self.instances:
             self.nfeatures = np.max([self.nfeatures, instance.max_feature()])
+        # get the labels we are working with
         self.unique_labels = np.unique(self.s2l_key.values())
         pass
 
+    # returns the key'd label for an instance (0, 1 to -1 1)
     def get_label(self, instance):
         return self.s2l_key[instance.get_label()]
 
+    # one function to do this, so that we don't need
+    # to ever worry about mixing up our zero indexing on features
     def get_feat(self, instance, feature):
         return instance.get(feature + 1, default=0)
 
+    # return the feature values for the entire dataset at a
+    # particular feature
     def get_feature_set(self, feature):
         values = np.array([tuple((self.get_label(instance),
                           self.get_feat(instance, int(feature)))) for instance in self.instances],
                           dtype=self.sort_dtype)
         return values
 
+    # builds the hypothesis class, and computes some static
+    # information for each hypothesis, such as the cutoff,
+    # the label for the greater than region, and the label
+    # for the less than region
     def make_hypothesis_class(self, instances):
         self.instances = instances
         self.learn_features()
@@ -58,6 +69,7 @@ class Adaboost(Predictor):
             # store the labels with the values so we can simplify hypothesis class significantly
             this_feature = np.zeros(0)
             unique_vals = np.unique(vals['value'])
+            # one cutoff per pair of values
             for idx in range(0, unique_vals.shape[0] - 1):
                 this_val = unique_vals[idx]
                 next_val = unique_vals[idx + 1]
@@ -67,6 +79,8 @@ class Adaboost(Predictor):
                                            return_counts=True)
                 (lvals, lv_ct) = np.unique(vals[vals['value'] <= cutoff]['label'],
                                            return_counts=True)
+                # figure out the best hypothesis based on the counts of
+                # labels greater or less
                 greater = gvals[np.argmax(gv_ct)]
                 less = lvals[np.argmax(lv_ct)]
                 self.hyp_set[count] = tuple((feature_id, cutoff, greater, less, 0))
@@ -75,6 +89,7 @@ class Adaboost(Predictor):
         self.hyp_set = self.hyp_set[0:count]
         pass
 
+    # precomputed, so this is a cheap computation
     def calculate_hyp(self, hypothesis, value):
         if (value > hypothesis['cutoff']):
             return hypothesis['greater']
@@ -101,12 +116,13 @@ class Adaboost(Predictor):
                 for i in range(0, examples.shape[0]):
                     example = examples[i]
                     yhat = self.calculate_hyp(hypo, example['value'])
+                    # update our error
                     new_err += D[i]*float(int(yhat) != example['label'])
                 self.hyp_set[idx]['error'] = new_err
             sorted_feat_hyps = np.sort(self.hyp_set, order=('error'))
             self.hyp[t] = sorted_feat_hyps[0] # lowest error
             tol = self.hyp[t]['error'] # tolerance is our error
-            if (tol != 0): # in case we have a divide by zero
+            if (tol != 0): # in case we would a divide by zero, end here
                 best_feature = self.hyp[t]['feature']
                 feature_vals = self.get_feature_set(best_feature)
                 self.alpha[t] = .5*np.log((1-tol)/tol)

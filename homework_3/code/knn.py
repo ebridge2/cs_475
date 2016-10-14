@@ -12,6 +12,7 @@ from scipy.stats import mode
 
 
 class KNN(Predictor):
+    # an abstract class to save some space
     __metaclass__ = ABCMeta
 
     def __init__(self, knn):
@@ -34,6 +35,7 @@ class KNN(Predictor):
         pass
 
     def distance(self, ex1, ex2):
+        # we're allowed to use scipy, so might as well
         return distance.euclidean(ex1, ex2)
 
     @abstractmethod
@@ -59,6 +61,7 @@ class Standard_knn(KNN):
         dist = [] # one distance for each 
         dtype = [('idx', int), ('label', int), ('dist', float)]
         pred_ex = self.load_example(instance)
+        # compare for each example
         for idx, example in enumerate(self.instances):
             cmp_ex = self.load_example(example)
             dist.append(tuple((idx, int(example.get_label()), self.distance(pred_ex, cmp_ex))))
