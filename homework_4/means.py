@@ -25,7 +25,7 @@ class Lambda_Means(Predictor):
         example = np.zeros((self.nfeatures))
         for idx in instance:
             # since we have 1 indexed features but zero indexed arrays
-            example[idx-1] = instance.get(idx)
+            example[idx - 1] = instance.get(idx)
         return example[:self.nfeatures]
 
     def get_feature(self, instance, feature):
@@ -48,21 +48,29 @@ class Lambda_Means(Predictor):
 
     def initialize(self):
         # will be the mean of all of these
-        resp = np.ones((self.ninstances, self.K))         
-        means = np.zeros((self.nfeatures, 1))
-        for feature in range(0, self.nfeatures):
-            means[feature, 0] = self.get_feature_mean(resp, feature)
-        self.resp = resp
-        self.means = means
+        self.resp = np.ones((self.ninstances, self.K))         
+        self.update_means()
+        # mean of the dataset will be the first cluster
+        mean_vec = self.means[:,0]
+        if (self.lambd <= 0):
+            instances = self.instances
+            distance = np.zeros((self.ninstances))
+            for idx in range(0, self.ninstances):
+                x = self.load_example(instances[idx])
+                distance[idx] = self.squared_distance(x, mean_vec)
+            self.lambd = np.mean(distance)
+            print self.lambd
         pass
+
+    def squared_distance(self, x, y):
+        return distance.euclidean(x, y)**2
 
     # a function to compute the distance between a single datum and
     # all of the clusters we have
     def compute_distance(self, x, means):
-        K = self.K
-        distances = np.zeros((K))
-        for k in range(0, K):
-            distances[k] = distance.euclidean(x, means[:,k])**2
+        distances = np.zeros((self.K))
+        for k in range(0, self.K):
+            distances[k] = self.squared_distance(x, means[:,k])
         return distances
 
     def get_responsibilities(self, lambd):
@@ -70,14 +78,13 @@ class Lambda_Means(Predictor):
         # load the means locally for speed
         means = self.means
         for idx in range(0, self.ninstances):
-            print "resp" + str(idx)
             x = self.load_example(self.instances[idx])
             distance = self.compute_distance(x, means)
-            distance = distance[distance <= lambd]
+            distance = np.where(distance <= lambd)[0]
             if distance.shape[0] != 0:
                 # compute the minimum distance, and use
                 # only the minimum idx in case of ties
-                clus_id = np.min(np.argmin(distance))
+                clus_id = np.min(distance)
                 # set the responsibility to 1, will be 0 otherwise
                 r[idx, clus_id] = 1
             # make a new cluster if none of the current clusters
@@ -101,7 +108,6 @@ class Lambda_Means(Predictor):
         means = np.zeros((self.nfeatures, K))
         instances = self.instances
         for k in range(0, K):
-            print "means" + str(k)
             r_vec = r[:,k]
             # get the instance ids we want so we don't have to
             # check all of them
@@ -109,9 +115,7 @@ class Lambda_Means(Predictor):
             for idx in r_ids:
                 means[:,k] += self.load_example(instances[idx])
             if (r_ids.shape[0] != 0):
-                means[:,k] = means[:,k]/r_ids.shape[0]
-            else:
-                means[:,k] = means[:,k]
+                means[:,k] = means[:,k]/float(r_ids.shape[0])
         # update with our maximized means
         self.means = means
         pass
@@ -122,11 +126,12 @@ class Lambda_Means(Predictor):
         # initialize the parameters of the model (resps and means)
         self.initialize()
         for i in range(0, self.iterations):
-            print i
             # get the respnsibilities, E step
             self.get_responsibilities(self.lambd)
             # maximize the means, M step
             self.update_means()
+        print self.means
+        print self.K
         pass
 
     # make predictions baed on the shortest distance cluster to
