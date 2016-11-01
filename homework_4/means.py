@@ -80,13 +80,10 @@ class Lambda_Means(Predictor):
         for idx in range(0, self.ninstances):
             x = self.load_example(self.instances[idx])
             distance = self.compute_distance(x, means)
-            distance = np.where(distance <= lambd)[0]
-            if distance.shape[0] != 0:
-                # compute the minimum distance, and use
-                # only the minimum idx in case of ties
-                clus_id = np.min(distance)
+            dist_idx = np.argmin(distance)
+            if distance[dist_idx] <= lambd:
                 # set the responsibility to 1, will be 0 otherwise
-                r[idx, clus_id] = 1
+                r[idx, dist_idx] = 1
             # make a new cluster if none of the current clusters
             # satisfy the lambda requirement
             else:
@@ -125,13 +122,14 @@ class Lambda_Means(Predictor):
         self.calculate_max_feature()
         # initialize the parameters of the model (resps and means)
         self.initialize()
+        print self.means
         for i in range(0, self.iterations):
             # get the respnsibilities, E step
             self.get_responsibilities(self.lambd)
             # maximize the means, M step
             self.update_means()
-        print self.means
-        print self.K
+            print self.means
+            print self.means.shape
         pass
 
     # make predictions baed on the shortest distance cluster to
