@@ -67,7 +67,6 @@ class Naive_Bayes(Predictor):
     # of the probability.
     def log_prob(self, x, mean, var):
         return (-.5*np.log(2*var*np.pi) - (x - mean)**2/float(2*var))
-        #return 1/float(np.sqrt(2*var**2*np.pi))*np.exp(-(x - mean)**2/float(2*var**2))
 
     def get_posteriors(self):
         p = np.zeros((self.ninstances, self.K))
@@ -131,17 +130,11 @@ class Naive_Bayes(Predictor):
         self.calculate_max_feature()
         # initialize the parameters of the model (resps and means)
         self.initialize()
-        print self.means
-        print self.var
         for i in range(0, self.iterations):
             # get the respnsibilities, E step
             self.get_posteriors()
             # maximize the means, M step
             self.update_params()
-            for k in range(0, self.K):
-                print np.where(self.post[:, k] != 0) 
-            print self.means
-            print self.var
         pass
 
     # make predictions baed on the shortest distance cluster to
@@ -156,5 +149,6 @@ class Naive_Bayes(Predictor):
             for j in range(0, nfeatures):
                 k_clusts[k] += self.log_prob(x[j], means[j, k], var[j, k])
         k_clusts = np.add(k_clusts, np.log(self.phi))
+        clus = np.min(np.argmax(k_clusts))
         # return minimum cluster id that has the minimum distance
         return np.min(np.argmax(k_clusts))
