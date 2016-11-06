@@ -66,7 +66,7 @@ class Naive_Bayes(Predictor):
     # a function to return the analytical solution to the log
     # of the probability.
     def log_prob(self, x, mean, var):
-        return (-.5*np.log(2*var**2*np.pi) - (x - mean)**2/float(2*var**2))
+        return (-.5*np.log(2*var*np.pi) - (x - mean)**2/float(2*var))
         #return 1/float(np.sqrt(2*var**2*np.pi))*np.exp(-(x - mean)**2/float(2*var**2))
 
     def get_posteriors(self):
@@ -118,7 +118,6 @@ class Naive_Bayes(Predictor):
                 for j in range(0, self.nfeatures):
                     for i in range(0, p_ids.shape[0]):
                         var[j,k] += self.squared_distance(ex_post[j, i], means[j, k])
-
                 var[:, k] = var[:, k] / float(unbiased)
                 var[:, k] = np.max(np.column_stack((var[:, k], S)), axis=1)
         # update with our maximized means
@@ -132,11 +131,16 @@ class Naive_Bayes(Predictor):
         self.calculate_max_feature()
         # initialize the parameters of the model (resps and means)
         self.initialize()
+        print self.means
+        print self.var
         for i in range(0, self.iterations):
             # get the respnsibilities, E step
             self.get_posteriors()
+            print self.post
             # maximize the means, M step
             self.update_params()
+            print self.means
+            print self.var
         pass
 
     # make predictions baed on the shortest distance cluster to
