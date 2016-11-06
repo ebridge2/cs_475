@@ -149,6 +149,5 @@ class Naive_Bayes(Predictor):
             for j in range(0, nfeatures):
                 k_clusts[k] += self.log_prob(x[j], means[j, k], var[j, k])
         k_clusts = np.add(k_clusts, np.log(self.phi))
-        clus = np.min(np.argmax(k_clusts))
         # return minimum cluster id that has the minimum distance
         return np.min(np.argmax(k_clusts))
