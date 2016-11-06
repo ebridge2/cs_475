@@ -136,9 +136,10 @@ class Naive_Bayes(Predictor):
         for i in range(0, self.iterations):
             # get the respnsibilities, E step
             self.get_posteriors()
-            print self.post
             # maximize the means, M step
             self.update_params()
+            for k in range(0, self.K):
+                print np.where(self.post[:, k] != 0) 
             print self.means
             print self.var
         pass
@@ -154,5 +155,6 @@ class Naive_Bayes(Predictor):
         for k in range(0, self.K):
             for j in range(0, nfeatures):
                 k_clusts[k] += self.log_prob(x[j], means[j, k], var[j, k])
+        k_clusts = np.add(k_clusts, np.log(self.phi))
         # return minimum cluster id that has the minimum distance
         return np.min(np.argmax(k_clusts))
