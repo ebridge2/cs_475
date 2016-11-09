@@ -59,7 +59,6 @@ class Lambda_Means(Predictor):
                 x = self.load_example(instances[idx])
                 distance[idx] = self.squared_distance(x, mean_vec)
             self.lambd = np.mean(distance)
-            print self.lambd
         pass
 
     def squared_distance(self, x, y):
@@ -122,14 +121,11 @@ class Lambda_Means(Predictor):
         self.calculate_max_feature()
         # initialize the parameters of the model (resps and means)
         self.initialize()
-        print self.means
         for i in range(0, self.iterations):
             # get the respnsibilities, E step
             self.get_responsibilities(self.lambd)
             # maximize the means, M step
             self.update_means()
-            print self.means
-            print self.means.shape
         pass
 
     # make predictions baed on the shortest distance cluster to
