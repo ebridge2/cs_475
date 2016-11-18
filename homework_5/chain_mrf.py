@@ -192,6 +192,7 @@ class MaxSum:
         table[0, :, 1] = self.get_current_message(0)
         for i in range(1, self.n):
             # get an array corresponding to the factor we just moved over
+            # to go from i-1 to i, and use addition here since it is a max sum
             table[i,:,0] = self.get_factor_message(self.n + i - 1,
                 np.add(table[i-1,:,0], table[i-1,:,1]))
             table[i,:,1]  = self.get_current_message(i)
@@ -214,13 +215,17 @@ class MaxSum:
         return np.insert(self._assignments, 0, 0)
 
     def max_probability(self, x_i):
+        # consider the normalizing constant of the sumprod
         norm = self.sumprod.get_normalization(x_i - 1)
-        return np.max(self.table[x_i-1,:,:].sum(axis=1))
+        # and normalize the max prob here by the log of the sum of the normalizing constant
+        return np.max(self.table[x_i-1,:,:].sum(axis=1)) - np.log(norm.sum())
 
     def get_factor_reverse(self, factor_id, mu):
         marginal = np.zeros((self.k, self.k))
         for k1 in range(0, self.k):
             for k2 in range(0, self.k):
+                # logs instead of direct probabilities, so addition in place of multiplication
+                # and logs anywhere we take a probability
                 marginal[k1, k2] = np.log(self._potentials.potential(factor_id + 1, k1 + 1, k2 + 1)) + mu[k2]
         return marginal.max(axis=1)
 
