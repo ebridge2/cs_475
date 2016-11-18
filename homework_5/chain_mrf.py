@@ -106,72 +106,134 @@ class SumProduct:
         self._potentials = p
         self.k = self._potentials.num_x_values()
         self.n = self._potentials.chain_length()
+        self.init_table()
         # TODO: EDIT HERE
         # add whatever data structures needed
 
+    def init_table(self):
+        table = np.ones((self.n, self.k, 3))
+        # build the left-neighbor direction, and then the right-neighbor
+        # direction starting from the opposite end
+        # use values precomputed for speed
+        # start at the 0th node (1-indexed 1)
+        table[0, :, 1] = self.get_current_message(0)
+        for i in range(1, self.n):
+            # get an array corresponding to the factor we just moved over
+            table[i,:,0] = self.get_factor_message(self.n + i - 1,
+                np.multiply(table[i-1,:,0], table[i-1,:,1]))
+            table[i,:,1]  = self.get_current_message(i)
+        table[self.n - 1, :, 1] = self.get_current_message(self.n - 1)
+        for i in reversed(range(0, self.n - 1)):
+            table[i,:,2] = self.get_factor_reverse(self.n + i,
+                np.multiply(table[i+1,:,2], table[i+1,:,1]))
+            table[i, :, 1] = self.get_current_message(i)
+        self.table = table
+        pass
+
+    # note that we keep all code to be 0-indexed internally, and marginal_probability
+    # swaps the x_i from 1 to zero indexing
     def marginal_probability(self, x_i):
         # TODO: EDIT HERE
         # should return a python list of type float, with its length=k+1, and the first value 0
-        # store the messages here, as right message, left message, and current factor
-        result = np.ones((self.k + 1, 3))
-        from pdb import set_trace as pdb
-        pdb()
-        result[:, 0] = self.get_message(x_i, -1)
-        pdb()
-        result[:, 1] = self.get_message(x_i, 1)
-        pdb()
-        result[:, 2] = self.get_current_mu(x_i)
-        pdb()
-        # This code is used for testing only and should be removed in your implementation.
-        # It creates a uniform distribution, leaving the first position 0
-        # chop off the first value
-        result = np.prod(result, axis=1)
+        result = self.get_normalization(x_i-1)
         result = np.divide(result, np.sum(result))
-        result[0] = 0
+        result = np.insert(result, 0, 0)
         return result
 
-    # get a message at a particular node, where direction tells us which way to look
-    # -1 for left, 1 for right
-    def get_message(self, x_i, direction):
-        # Want to handle edge case properly in case we start at a border and need
-        # the left and right messages, we could get an error if this is not handled
-        # if it's the last node to consider
-        if (x_i == 1 and direction == -1) or (x_i == self.k and direction == 1):
-            return self.get_current_mu(x_i)
-        else: # know that we are not at an end, so use recursion here
-            marginal = np.zeros((self.k + 1, self.k + 1))
-            # make a matrix of all the marginals
-            for k1 in range(1, self.k + 1):
-                for k2 in range(1, self.k + 1):
-                    warn = 0
-                    if (direction == -1):
-                        warn = 1
-                    marginal[k1, k2] = self._potentials.potential(self.n + x_i - warn, k1, k2)
-                   
-                        
-            # sum across it for this x_i
-            marginal = marginal.sum(axis=1)
-            # take the product element wise with the next node
-            result = np.multiply(marginal, self.get_message(x_i + direction, direction))
-            return result
+    # use this for normalization for sumprod
+    def get_normalization(self, x_i):
+        result = np.product(self.table[x_i,:,:], axis=1)
+        return result
 
-    def get_current_mu(self, x_i):
-        result = np.zeros((self.k + 1))
-        for k in range(1, self.k + 1):
-            result[k] = self._potentials.potential(x_i, k)
+    # use this within maxsum
+    def get_total_potentials(self, x_i):
+        result = np.sum(np.log(self.table[x_i,:,:]), axis=1)
+        return result
+
+    # gets the message of a particular factor as we go from nodes 0 to n.
+    # this obtains the message from the preceding node, and multiplies it element wise
+    # with all the joints of a particular factor
+    def get_factor_reverse(self, factor_id, mu):
+        marginal = np.zeros((self.k, self.k))
+        for k1 in range(0, self.k):
+            for k2 in range(0, self.k):
+                marginal[k1, k2] = self._potentials.potential(factor_id + 1, k1 + 1, k2 + 1)*mu[k2]
+        marginal = marginal.sum(axis=1)
+        return marginal
+
+    # same idea as before
+    def get_factor_message(self, factor_id, mu):
+        marginal = np.zeros((self.k, self.k))
+        for k1 in range(0, self.k):
+            for k2 in range(0, self.k):
+                marginal[k1, k2] = self._potentials.potential(factor_id + 1, k2 + 1, k1 + 1)*mu[k2]
+        marginal = marginal.sum(axis=1)
+        return marginal
+
+    def get_current_message(self, x_i):
+        result = np.zeros((self.k))
+        for k in range(0, self.k):
+            result[k] = self._potentials.potential(x_i + 1, k + 1)
         return result
 
 
 class MaxSum:
     def __init__(self, p):
         self._potentials = p
-        self._assignments = [0] * (p.chain_length() + 1)
+        self.k = self._potentials.num_x_values()
+        self.n = self._potentials.chain_length()
+        self.init_table()
+        self.sumprod = SumProduct(p)
         # TODO: EDIT HERE
         # add whatever data structures needed
 
+    def init_table(self):
+        table = np.zeros((self.n, self.k, 3))
+        table[0, :, 1] = self.get_current_message(0)
+        for i in range(1, self.n):
+            # get an array corresponding to the factor we just moved over
+            table[i,:,0] = self.get_factor_message(self.n + i - 1,
+                np.add(table[i-1,:,0], table[i-1,:,1]))
+            table[i,:,1]  = self.get_current_message(i)
+        table[self.n - 1, :, 1] = self.get_current_message(self.n - 1)
+        for i in reversed(range(0, self.n - 1)):
+            table[i,:,2] = self.get_factor_reverse(self.n + i,
+                np.add(table[i+1,:,2], table[i+1,:,1]))
+            table[i, :, 1] = self.get_current_message(i)
+        self.table = table
+        pass
+
     def get_assignments(self):
-        return self._assignments
+        assignments = np.zeros((self.n))
+        table = self.table
+        for i in range(0, self.n):
+            # compute the argmax sum for all values, and add one for 0-indexing
+            assignments[i] = np.argmax(table[i,:,:].sum(axis=1)) + 1
+        # put our zero pad on the front bc 0-indexing to 1-indexing
+        self._assignments = assignments
+        return np.insert(self._assignments, 0, 0)
 
     def max_probability(self, x_i):
-        # TODO: EDIT HERE
-        return 0.0
+        norm = self.sumprod.get_normalization(x_i - 1)
+        return np.max(self.table[x_i-1,:,:].sum(axis=1))
+
+    def get_factor_reverse(self, factor_id, mu):
+        marginal = np.zeros((self.k, self.k))
+        for k1 in range(0, self.k):
+            for k2 in range(0, self.k):
+                marginal[k1, k2] = np.log(self._potentials.potential(factor_id + 1, k1 + 1, k2 + 1)) + mu[k2]
+        return marginal.max(axis=1)
+
+    def get_factor_message(self, factor_id, mu):
+        marginal = np.zeros((self.k, self.k))
+        for k1 in range(0, self.k):
+            for k2 in range(0, self.k):
+                marginal[k1, k2] = np.log(self._potentials.potential(factor_id + 1, k2 + 1, k1 + 1)) + mu[k2]
+        return marginal.max(axis=1)
+
+    def get_current_message(self, x_i):
+        result = np.zeros((self.k))
+        for k in range(0, self.k):
+            result[k] = self._potentials.potential(x_i + 1, k+1)
+        return np.log(result)
+
