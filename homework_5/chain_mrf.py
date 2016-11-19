@@ -209,10 +209,12 @@ class MaxSum:
         table = self.table
         for i in range(0, self.n):
             # compute the argmax sum for all values, and add one for 0-indexing
+            # note that argmax automatically returns the minimum index
             assignments[i] = np.argmax(table[i,:,:].sum(axis=1)) + 1
         # put our zero pad on the front bc 0-indexing to 1-indexing
         self._assignments = assignments
-        return np.insert(self._assignments, 0, 0)
+        # make sure to return type as integers, since we are returning specific labels
+        return np.insert(self._assignments, 0, 0).astype(int)
 
     def max_probability(self, x_i):
         # consider the normalizing constant of the sumprod
