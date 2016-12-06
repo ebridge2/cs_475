@@ -92,3 +92,72 @@ class Margin_Perceptron(Perceptron_Base):
                 if ((y*value) < 1):
                     self.w = self.w + self.rate * y * example
         pass
+
+class MC_Perceptron():
+
+    def __init__(self, iterations):
+        self.nfeatures = 0
+        self.iterations = iterations
+        # labels to class number
+        self.l2cdict = {}
+        # class number to labels
+        self.c2ldict = {}
+        self.nclasses = 0
+        pass
+
+    def load_example(self, instance): 
+        example = np.zeros((self.nfeatures)) 
+        for idx in instance: 
+            # since we have 1 indexed features but zero indexed arrays 
+            example[idx - 1] = instance.get(idx) 
+        return example[:self.nfeatures]
+ 
+    def get_feature(self, instance, feature): 
+        return instance.get(feature + 1, default=0) 
+
+    # figure out number of classes we need to track, and number of features 
+    # then, initialize the weight matrix
+    def initialize_attrs(self, instances):
+        # go thru once just to get maximum feature information,
+        # and class information at same time
+        for instance in instances: 
+            self.nfeatures = max(instance.max_feature(), self.nfeatures) 
+            l = instance.get_label()
+            # if we haven't seen this class yet, increment our class counter
+            # accordingly
+            if l not in self.l2cdict.keys():
+                self.l2cdict[l] = int(l) - 1
+                self.c2ldict[int(l) - 1] = l
+                self.nclasses += 1
+        self.ninstances = len(instances)
+        # initialize weight matrix as nclasses x nfeatures
+        # where each row is just the weight vector for each class
+        self.weight = np.zeros((self.nclasses, self.nfeatures))
+        pass
+
+    def train(self, instances):
+        self.initialize_attrs(instances)
+        weight = self.weight
+        for i in range(0, self.iterations):
+            for instance in instances:
+                x = self.load_example(instance)
+                # numpy 2 da rescue with dat dere matrix multiplication
+                predictions = weight.dot(x)
+                yhat = np.argmax(predictions)
+                print yhat
+                y = self.l2cdict[instance.get_label()]
+                # when we are wrong, make an update
+                if yhat != y:
+                    # subtract x from the predicted
+                    weight[yhat, :] -= x
+                    # add x to the truth
+                    weight[y, :] += x
+        self.weight = weight
+        pass
+
+    def predict(self, instance):
+        x = self.load_example(instance)
+        # TGFN (Thank God for Numpy)
+        predictions = self.weight.dot(x)
+        yhat  = np.argmax(predictions)
+        return self.c2ldict[yhat]

@@ -4,7 +4,7 @@ import sys
 import pickle
 
 from cs475_types import ClassificationLabel, FeatureVector, Instance, Predictor
-from perceptron import Perceptron, Weighted_Perceptron, Margin_Perceptron
+from perceptron import Perceptron, Weighted_Perceptron, Margin_Perceptron, MC_Perceptron
 from pegasos import Pegasos
 from knn import Standard_knn, Distance_knn
 from adaboost import Adaboost
@@ -99,6 +99,8 @@ def train(instances, args):
         predictor = Weighted_Perceptron(args.online_learning_rate, args.online_training_iterations)
     elif (args.algorithm == "perceptron"): # use a simple perceptron model
         predictor = Perceptron(args.online_learning_rate, args.online_training_iterations)
+    elif (args.algorithm == "mc_perceptron"):
+        predictor = MC_Perceptron(args.online_training_iterations)
     elif (args.algorithm == "margin_perceptron"):
         predictor = Margin_Perceptron(args.online_learning_rate, args.online_training_iterations)
     elif (args.algorithm == "pegasos"):
