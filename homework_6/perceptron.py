@@ -144,7 +144,6 @@ class MC_Perceptron():
                 # numpy 2 da rescue with dat dere matrix multiplication
                 predictions = weight.dot(x)
                 yhat = np.argmax(predictions)
-                print yhat
                 y = self.l2cdict[instance.get_label()]
                 # when we are wrong, make an update
                 if yhat != y:
